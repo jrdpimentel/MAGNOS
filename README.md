@@ -4,7 +4,7 @@
 
 *Monitor every machine. Manage every transaction. Monetize every minute.*
 
-Free, open-source computer rental management, point of sale, and real-time monitoring for internet cafÃ©s and gaming shops, on Windows.
+Free, open-source computer rental management, point of sale, and real-time monitoring for internet cafe and gaming shops, on Windows.
 
 > Independent project, not affiliated with any commercial cafÃ©-management product.
 
