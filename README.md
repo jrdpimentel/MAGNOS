@@ -1,17 +1,19 @@
-# MAGNOS
+﻿# MAGNOS
 
 **Management And Governance Network Operations System**
 
 *Monitor every machine. Manage every transaction. Monetize every minute.*
 
-Free, open-source computer rental management, point of sale, and real-time monitoring for internet cafés and gaming shops, on Windows.
+Free, open-source computer rental management, point of sale, and real-time monitoring for internet cafÃ©s and gaming shops, on Windows.
 
-> Independent project, not affiliated with any commercial café-management product.
+> Independent project, not affiliated with any commercial cafÃ©-management product.
+
+[![CI](https://github.com/jrdpimentel/MAGNOS/actions/workflows/ci.yml/badge.svg)](https://github.com/jrdpimentel/MAGNOS/actions/workflows/ci.yml)
 
 ![Dashboard](docs/images/01-dashboard.png)
 
 ## What it does
-A café owner installs the **server** on one PC and the **client** on every customer PC. Staff run the business from a web dashboard; customers get a lock screen and a timer; members check their balance from their phone.
+A cafÃ© owner installs the **server** on one PC and the **client** on every customer PC. Staff run the business from a web dashboard; customers get a lock screen and a timer; members check their balance from their phone.
 
 | | |
 |---|---|
@@ -90,3 +92,4 @@ Designed, tested, and maintained by **John Robert Pimentel**.
 
 ## License
 MIT. See [LICENSE](LICENSE).
+
