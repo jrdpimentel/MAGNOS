@@ -13,7 +13,7 @@ Free, open-source computer rental management, point of sale, and real-time monit
 ![Dashboard](docs/images/01-dashboard.png)
 
 ## What it does
-A cafÃ© owner installs the **server** on one PC and the **client** on every customer PC. Staff run the business from a web dashboard; customers get a lock screen and a timer; members check their balance from their phone.
+A cafe owner installs the **server** on one PC and the **client** on every customer PC. Staff run the business from a web dashboard; customers get a lock screen and a timer; members check their balance from their phone.
 
 | | |
 |---|---|
