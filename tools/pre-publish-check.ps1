@@ -1,4 +1,4 @@
-# Run before publishing:  powershell -ExecutionPolicy Bypass -File tools\pre-publish-check.ps1
+﻿# Run before publishing:  powershell -ExecutionPolicy Bypass -File tools\pre-publish-check.ps1
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $script:ok = $true
 function Pass($m) { Write-Host "  OK    $m" -ForegroundColor Green }
@@ -15,7 +15,7 @@ elseif ((Get-Content LICENSE -Raw) -match 'contributors|Your Name') { Fail "LICE
 
 Write-Host "`n3. Screenshots" -ForegroundColor Cyan
 $need = '01-dashboard','02-computers','03-seat-map','04-pos','05-inventory','06-chat-activity','07-lock-screen','08-session-widget','09-member-portal'
-$missing = $need | Where-Object { -not (Test-Path "docs\images\$_.png") }
+$tracked = @(git ls-files -co --exclude-standard docs/images); $missing = $need | Where-Object { $tracked -cnotcontains "docs/images/$_.png" }
 if ($missing) { Warn ("missing: " + ($missing -join ', ')) } else { Pass "all 9 screenshots present" }
 
 Write-Host "`n4. Leftover old project name" -ForegroundColor Cyan
@@ -33,3 +33,4 @@ if ($LASTEXITCODE -eq 0) { Pass "all tests passed" } else { Fail "tests failed" 
 
 Write-Host ""
 if ($script:ok) { Write-Host "Ready to publish (check any WARN lines above)." -ForegroundColor Green } else { Write-Host "Fix the FAIL lines before publishing." -ForegroundColor Red }
+
