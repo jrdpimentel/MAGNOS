@@ -1,0 +1,23 @@
+﻿name: CI
+on: [push, pull_request]
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build server
+        run: dotnet build server/MAGNOS.Server.csproj -c Release
+      - name: Build client
+        run: dotnet build client/MAGNOS.Client.csproj -c Release
+      - name: Run tests
+        run: dotnet test tests/Server.Tests/Server.Tests.csproj -c Release --logger "trx;LogFileName=results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: tests/Server.Tests/TestResults/*.trx
+

@@ -1,0 +1,294 @@
+﻿<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAGNOS Admin</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#1b2433;--muted:#6b7587;--line:#e4e8f0;--brand:#2f6df6;--ok:#16a34a;--bad:#dc2626;--warn:#d97706}
+:root[data-theme=dark]{--bg:#0f1420;--card:#171e2e;--text:#e8ecf5;--muted:#8d97ab;--line:#26304a}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;font:14px system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+#app{display:flex;min-height:100vh}
+nav{width:230px;background:var(--card);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;overflow:auto;flex:none}
+nav h1{font-size:18px;color:var(--brand);margin:4px 8px 16px}
+nav a{display:block;padding:9px 12px;border-radius:8px;color:var(--muted);text-decoration:none;margin-bottom:2px;cursor:pointer}
+nav a.on{background:var(--brand);color:#fff}
+main{flex:1;min-width:0}
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--card);border-bottom:1px solid var(--line)}
+header .sp{flex:1}#menu{display:none}
+#page{padding:20px}
+h2{margin:0 0 14px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.kpi small{color:var(--muted);display:block;text-transform:uppercase;font-size:11px;letter-spacing:.04em}.kpi b{font-size:22px}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{color:var(--muted);font-size:11px;text-transform:uppercase}
+.badge{padding:2px 9px;border-radius:99px;font-size:12px;background:var(--line);color:var(--muted)}
+.badge.Available{background:#dcfce7;color:#166534}.badge.Occupied{background:#fee2e2;color:#991b1b}.badge.Paused{background:#fef3c7;color:#92400e}
+.btn{padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+input,select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);max-width:100%}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.bar .sp{flex:1}
+.seats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.seat{cursor:pointer;border-left:5px solid var(--line)}
+.seat.Available{border-left-color:var(--ok)}.seat.Occupied{border-left-color:var(--bad)}.seat.Paused{border-left-color:var(--warn)}
+.seat b{font-size:16px}.seat div{color:var(--muted);margin-top:4px}
+.ov{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;z-index:20}
+.modal{background:var(--card);padding:20px;border-radius:12px;width:min(92vw,380px);display:grid;gap:10px}
+.modal h3{margin:0}.modal label{display:grid;gap:4px;color:var(--muted)}.row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1b2433;color:#fff;padding:10px 16px;border-radius:8px;display:none;z-index:30}
+#login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:40}
+#login .card{width:min(92vw,340px);display:grid;gap:10px}
+.donut{width:150px;height:150px;border-radius:50%;margin:10px auto}.donut i{display:block;width:90px;height:90px;border-radius:50%;background:var(--card);margin:30px;text-align:center;line-height:90px;font-style:normal;font-weight:700;font-size:20px}
+@media(max-width:800px){nav{position:fixed;left:-250px;z-index:10;transition:left .2s;height:100%}nav.open{left:0}#menu{display:inline-block}.grid2{grid-template-columns:1fr}}
+</style></head>
+<body>
+<div id="login"><div class="card"><h2>MAGNOS Admin</h2><input id="k" type="password" placeholder="Admin key"><div id="lmsg" style="color:var(--bad)"></div><button class="btn primary" id="go">Log in</button></div></div>
+<div id="app" hidden>
+<nav id="nav"><h1>MAGNOS</h1></nav>
+<main><header><button class="btn" id="menu">Menu</button><b id="title"></b><span class="sp"></span><button class="btn" id="theme">Dark / Light</button><button class="btn" id="out">Log out</button></header>
+<div id="page"></div></main></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+function h(t,a={},...c){const e=document.createElement(t);for(const[k,v]of Object.entries(a)){if(k.startsWith('on'))e[k]=v;else if(k==='class')e.className=v;else e.setAttribute(k,v)}c.flat().forEach(x=>{if(x!=null&&x!==false)e.append(x instanceof Node?x:document.createTextNode(String(x)))});return e}
+const peso=n=>'\u20B1'+Number(n||0).toFixed(2);
+const dur=m=>{m=Math.floor(m||0);return Math.floor(m/60)+'h '+(m%60)+'m'};
+const fdt=i=>i?new Date(i).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+let key=sessionStorage.getItem('k')||'',cur='dashboard',timer=null,lastSig='',pcsCache=[];
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',3500)}
+async function api(path,method='GET',body){
+  const r=await fetch('/api/admin'+path,{method,headers:{'X-Admin-Key':key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(r.status===401){sessionStorage.removeItem('k');showLogin('Wrong admin key.');throw new Error('401')}
+  const ct=r.headers.get('content-type')||'';const data=ct.includes('json')?await r.json():await r.text();
+  if(!r.ok){toast(typeof data==='string'&&data?data:'Error '+r.status);throw new Error('fail')}
+  return data}
+const safe=fn=>async(...a)=>{try{await fn(...a)}catch(e){}};
+function ask(title,fields,okText='OK'){return new Promise(res=>{
+  const ov=h('div',{class:'ov'});const box=h('div',{class:'modal'},h('h3',{},title));const ins={};
+  fields.forEach(f=>{const el=f.options?h('select',{},f.options.map(o=>h('option',{value:o},o))):h('input',{type:f.type||'text',placeholder:f.placeholder||'',value:f.value??''});ins[f.name]=el;box.append(h('label',{},f.label,el))});
+  const done=v=>{ov.remove();res(v)};
+  box.append(h('div',{class:'row'},h('button',{class:'btn',onclick:()=>done(null)},'Cancel'),h('button',{class:'btn primary',onclick:()=>done(Object.fromEntries(Object.entries(ins).map(([k,e])=>[k,e.value])))},okText)));
+  ov.append(box);document.body.append(ov);const f=Object.values(ins)[0];if(f)f.focus()})}
+function menuModal(title,items){return new Promise(res=>{const ov=h('div',{class:'ov'});const box=h('div',{class:'modal'},h('h3',{},title));
+  items.forEach(i=>box.append(h('button',{class:'btn',onclick:()=>{ov.remove();res(i)}},i)));
+  box.append(h('button',{class:'btn',onclick:()=>{ov.remove();res(null)}},'Close'));ov.append(box);document.body.append(ov)})}
+
+const PAGES=[['dashboard','Dashboard'],['computers','Computers'],['seatmap','Seat Map'],['pricing','Pricing Setting'],['billings','Billings'],['users','Top-Up / Users'],['pos','Point of Sale'],['inventory','Inventory'],['suppliers','Suppliers'],['sales','Sales'],['activity','Activity'],['chat','Chat'],['remote','Remote'],['wallpaper','Wallpaper']];
+const nav=$('#nav');PAGES.forEach(([id,name])=>nav.append(h('a',{'data-p':id,onclick:()=>{location.hash=id;nav.classList.remove('open')}},name)));
+
+function showLogin(msg){$('#app').hidden=true;$('#login').hidden=false;$('#lmsg').textContent=msg||''}
+async function doLogin(){key=$('#k').value.trim();sessionStorage.setItem('k',key);try{await api('/summary');$('#login').hidden=true;$('#app').hidden=false;route()}catch(e){}}
+$('#go').onclick=doLogin;$('#k').onkeydown=e=>{if(e.key==='Enter')doLogin()};
+$('#out').onclick=()=>{sessionStorage.removeItem('k');key='';showLogin('')};
+$('#menu').onclick=()=>nav.classList.toggle('open');
+function setTheme(t){document.documentElement.dataset.theme=t;localStorage.setItem('theme',t)}
+setTheme(localStorage.getItem('theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+$('#theme').onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+
+function route(){cur=(location.hash||'#dashboard').slice(1);if(!PAGES.some(p=>p[0]===cur))cur='dashboard';lastSig='';
+  nav.querySelectorAll('a').forEach(a=>a.classList.toggle('on',a.dataset.p===cur));
+  $('#title').textContent=PAGES.find(p=>p[0]===cur)[1];refresh()}
+window.onhashchange=route;
+async function refresh(){try{await({dashboard:pgDash,computers:pgComputers,seatmap:pgSeats,pricing:pgPricing,billings:pgBillings,users:pgUsers,wallpaper:pgWallpaper,pos:pgPOS,inventory:pgInventory,suppliers:pgSuppliers,sales:pgSales,activity:pgActivity,chat:pgChat,remote:pgRemote})[cur]()}catch(e){}
+  clearTimeout(timer);if(['computers','seatmap','activity','chat'].includes(cur))timer=setTimeout(refresh,3000)}
+function show(sig,...nodes){if(sig!==undefined){if(sig===lastSig)return;lastSig=sig}$('#page').replaceChildren(...nodes)}
+const kpi=(label,val,sub)=>h('div',{class:'card kpi'},h('small',{},label),h('b',{},val),sub?h('div',{style:'color:var(--muted)'},sub):null);
+
+async function pgDash(){const d=await api('/summary?days=14');
+  const max=Math.max(1,...d.series.map(s=>s.amount)),W=600,H=180,n=d.series.length;
+  const pts=d.series.map((s,i)=>[n>1?i*(W/(n-1)):W/2,H-(s.amount/max)*(H-20)-10]);
+  const NS='http://www.w3.org/2000/svg';const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H+20}`);svg.style.width='100%';
+  const pl=document.createElementNS(NS,'polyline');pl.setAttribute('points',pts.map(p=>p.join(',')).join(' '));pl.setAttribute('fill','none');pl.setAttribute('stroke','#2f6df6');pl.setAttribute('stroke-width','3');svg.append(pl);
+  pts.forEach((p,i)=>{const c=document.createElementNS(NS,'circle');c.setAttribute('cx',p[0]);c.setAttribute('cy',p[1]);c.setAttribute('r','4');c.setAttribute('fill','#2f6df6');const t=document.createElementNS(NS,'title');t.textContent=d.series[i].date+': '+peso(d.series[i].amount);c.append(t);svg.append(c)});
+  const tot=d.walkIn+d.memberSessions||1,deg=Math.round(d.memberSessions/tot*360);
+  const donut=h('div',{class:'donut',style:`background:conic-gradient(#16a34a 0 ${deg}deg,#2f6df6 ${deg}deg 360deg)`},h('i',{},d.totalTransactions));
+  show(undefined,h('div',{class:'cards'},kpi('Total transactions',d.totalTransactions,'Last 14 days'),kpi('Members',d.members),kpi('Walk-in sessions',d.walkIn),kpi('Rental income',peso(d.rentalIncome)),kpi('Top-up load',peso(d.topUpTotal)),kpi('Sales revenue',peso(d.salesRevenue)),kpi('Restock cost',peso(d.restockCost)),kpi('Inventory items',d.inventoryItems,'Low stock: '+d.lowStock)),
+    h('div',{class:'grid2'},h('div',{class:'card'},h('b',{},'Revenue trend'),svg),h('div',{class:'card'},h('b',{},'Customer types'),donut,h('div',{style:'text-align:center;color:var(--muted)'},'Members: '+d.memberSessions+'  \u2022  Walk-in: '+d.walkIn))))}
+
+function actionsFor(p){const base=['Message','Restart','Shutdown'];
+  if(p.status==='Offline')return['Remove'];if(p.status==='Available')return['Open time','Set time',...base,'Remove'];
+  if(p.status==='Paused')return['Resume','Stop','Transfer',...base];return['Pause','Stop','Transfer','Lock',...base]}
+async function act(p,a){const n=encodeURIComponent(p.name),T=['WalkIn','Member','VIP'];
+  try{
+    if(a==='Open time'){const v=await ask('Open time - '+p.name,[{name:'tier',label:'Rate',options:T}]);if(!v)return;await api(`/pcs/${n}/start`,'POST',{mode:'Open',minutes:0,tier:v.tier})}
+    else if(a==='Set time'){const v=await ask('Set time - '+p.name,[{name:'tier',label:'Rate',options:T},{name:'h',label:'Hours',type:'number',value:'1'},{name:'m',label:'Minutes',type:'number',value:'0'}]);if(!v)return;const mins=(+v.h||0)*60+(+v.m||0);if(mins<=0){toast('Enter a duration');return}await api(`/pcs/${n}/start`,'POST',{mode:'Fixed',minutes:mins,tier:v.tier})}
+    else if(['Pause','Resume','Stop'].includes(a))await api(`/pcs/${n}/${a.toLowerCase()}`,'POST')
+    else if(a==='Transfer'){const free=pcsCache.filter(x=>x.status==='Available').map(x=>x.name);if(!free.length){toast('No available PC');return}const v=await ask('Transfer '+p.name+' to',[{name:'to',label:'PC',options:free}],'Transfer');if(!v)return;await api(`/pcs/${n}/transfer`,'POST',{to:v.to})}
+    else if(a==='Message'){const v=await ask('Message to '+p.name,[{name:'text',label:'Text'}],'Send');if(!v||!v.text)return;await api(`/pcs/${n}/command`,'POST',{command:'Message',text:v.text})}
+    else if(['Lock','Restart','Shutdown'].includes(a)){const v=await ask(a+' '+p.name+'?',[],a);if(!v)return;await api(`/pcs/${n}/command`,'POST',{command:a})}
+    else if(a==='Remove'){const v=await ask('Remove '+p.name+'?',[],'Remove');if(!v)return;await api(`/pcs/${n}`,'DELETE')}
+    toast(a+' - done');lastSig='';refresh()}catch(e){}}
+const sessText=p=>{const s=p.session;if(!s)return['-','-','-'];const left=s.remaining!=null?dur(s.remaining)+' left':'Open';return[s.customer+' ('+s.tier+')',dur(s.elapsed)+' / '+left,peso(s.amount)]};
+
+async function pgComputers(){const pcs=await api('/pcs');pcsCache=pcs;
+  const sig=JSON.stringify(pcs.map(p=>[p.name,p.status,p.ip,p.session&&Math.floor(p.session.elapsed)]));
+  const c=s=>pcs.filter(p=>p.status===s).length;
+  const rows=pcs.map(p=>{const sel=h('select',{},h('option',{value:''},'Command'),actionsFor(p).map(a=>h('option',{value:a},a)));sel.onchange=()=>{const a=sel.value;sel.value='';if(a)act(p,a)};
+    const[who,time,amt]=sessText(p);return h('tr',{},h('td',{},sel),h('td',{},p.name),h('td',{},p.ip||'-'),h('td',{},who),h('td',{},time),h('td',{},h('span',{class:'badge '+p.status},p.status)),h('td',{},amt))});
+  show(sig,h('div',{class:'cards'},kpi('Total computers',pcs.length),kpi('Offline',c('Offline')),kpi('Occupied',c('Occupied')+c('Paused')),kpi('Available',c('Available'))),
+    h('div',{class:'card'},h('div',{class:'bar'},h('span',{class:'sp'}),h('button',{class:'btn primary',onclick:safe(async()=>{const v=await ask('Add computer',[{name:'name',label:'Name (no spaces)',placeholder:'PC-01'}],'Add');if(!v||!v.name)return;await api('/pcs','POST',{name:v.name});toast('Added');lastSig='';refresh()})},'+ Add Computer')),
+    h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Action','Computer','IP address','Customer','Time (used / left)','Status','Billing'].map(x=>h('th',{},x)))),h('tbody',{},rows)))))}
+
+async function pgSeats(){const pcs=await api('/pcs');pcsCache=pcs;
+  const sig=JSON.stringify(pcs.map(p=>[p.name,p.status,p.session&&Math.floor(p.session.elapsed)]));
+  show(sig,h('div',{class:'seats'},pcs.map(p=>{const s=p.session;
+    return h('div',{class:'card seat '+p.status,onclick:safe(async()=>{const a=await menuModal(p.name+' - '+p.status,actionsFor(p));if(a)act(p,a)})},h('b',{},p.name),h('div',{},p.status),h('div',{},s?s.customer:(p.ip||'')),h('div',{},s?(s.remaining!=null?dur(s.remaining)+' left':dur(s.elapsed)+' used'):''))})))}
+
+async function pgPricing(){const rules=await api('/pricing');
+  const form=h('div',{class:'card'},h('b',{},'Add / edit pricing rule'),
+    h('div',{class:'bar'},h('select',{id:'pt'},['WalkIn','Member','VIP'].map(t=>h('option',{value:t},t))),h('input',{id:'ph',type:'number',min:'0',placeholder:'Hours',style:'width:90px'}),h('input',{id:'pm',type:'number',min:'0',placeholder:'Minutes',style:'width:90px'}),h('input',{id:'pp',type:'number',min:'0',step:'0.01',placeholder:'Price',style:'width:110px'}),
+    h('button',{class:'btn primary',onclick:safe(async()=>{const mins=(+$('#ph').value||0)*60+(+$('#pm').value||0);await api('/pricing','POST',{tier:$('#pt').value,minutes:mins,price:+$('#pp').value});toast('Saved');refresh()})},'Save rule')),
+    h('div',{style:'color:var(--muted)'},'Time between rules is charged pro-rata at the smallest rule\u2019s rate. WalkIn = guests, Member = registered, VIP = special members.'));
+  const list=h('div',{class:'card'},h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Tier','Duration','Price',''].map(x=>h('th',{},x)))),h('tbody',{},rules.map(r=>h('tr',{},h('td',{},h('span',{class:'badge'},r.Tier)),h('td',{},dur(r.minutes)),h('td',{},peso(r.price)),h('td',{},h('button',{class:'btn',onclick:safe(async()=>{await api('/pricing/'+r.id,'DELETE');refresh()})},'Delete'))))))));
+  show(undefined,h('div',{class:'grid2'},form,list))}
+
+async function pgBillings(){const iso=d=>d.toISOString().slice(0,10);const now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1);
+  const f=h('input',{type:'date',value:iso(first)}),t=h('input',{type:'date',value:iso(now)}),q=h('input',{placeholder:'Search computer or customer...'});
+  const body=h('tbody',{}),stats=h('div',{class:'cards'});let data=[];
+  const draw=()=>{const s=q.value.toLowerCase();const rows=data.filter(r=>!s||(r.pc+r.customer).toLowerCase().includes(s));
+    body.replaceChildren(...rows.map(r=>h('tr',{},h('td',{},r.id),h('td',{},r.pc),h('td',{},r.customer),h('td',{},h('span',{class:'badge'},r.tier+' / '+r.mode)),h('td',{},dur(r.minutes)),h('td',{},peso(r.amount)),h('td',{},r.active?'In progress':'Done'),h('td',{},fdt(r.at)))));
+    stats.replaceChildren(kpi('Transactions',rows.length),kpi('Income',peso(rows.reduce((a,r)=>a+r.amount,0))))};
+  const load=safe(async()=>{const end=new Date(t.value);end.setDate(end.getDate()+1);data=await api(`/billings?from=${f.value}&to=${iso(end)}`);draw()});
+  f.onchange=t.onchange=load;q.oninput=draw;
+  show(undefined,stats,h('div',{class:'card'},h('div',{class:'bar'},q,h('span',{class:'sp'}),f,'to',t),h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['ID','Computer','Customer','Rate','Duration','Amount','Status','Started'].map(x=>h('th',{},x)))),body))));load()}
+
+async function pgUsers(){const us=await api('/users');
+  const rows=us.map(u=>{const sel=h('select',{},['Member','VIP'].map(x=>h('option',{value:x},x)));sel.value=u.tier;
+    sel.onchange=safe(async()=>{await api(`/users/${encodeURIComponent(u.username)}/tier`,'POST',{tier:sel.value});toast('Tier updated')});
+    return h('tr',{},h('td',{},u.username),h('td',{},u.fullName||'-'),h('td',{},sel),h('td',{},peso(u.wallet)),
+      h('td',{},h('button',{class:'btn primary',onclick:safe(async()=>{const v=await ask('Top up '+u.username,[{name:'amt',label:'Amount (use a minus to deduct)',type:'number',value:'20'}],'Top up');if(!v)return;await api('/topup','POST',{username:u.username,amount:+v.amt});toast('Wallet updated');refresh()})},'Top up'),' ',
+      h('button',{class:'btn',onclick:safe(async()=>{const v=await ask('New password for '+u.username,[{name:'pw',label:'Password (min 4)',type:'text'}],'Save');if(!v)return;await api(`/users/${encodeURIComponent(u.username)}/password`,'POST',{password:v.pw});toast('Password changed')})},'Reset password')))});
+  show(undefined,h('div',{class:'card'},h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Username','Name','Tier','Wallet','Actions'].map(x=>h('th',{},x)))),h('tbody',{},rows)))))}
+
+async function pgWallpaper(){
+  const img=h('img',{style:'max-width:100%;max-height:320px;border-radius:10px;display:none'});const note=h('div',{style:'color:var(--muted)'},'Loading...');
+  const file=h('input',{type:'file',accept:'image/*'});
+  const load=async()=>{try{const r=await fetch('/api/admin/wallpaper',{headers:{'X-Admin-Key':key}});
+    if(r.ok){img.src=URL.createObjectURL(await r.blob());img.style.display='block';note.textContent='Current lock-screen wallpaper:'}else{img.style.display='none';note.textContent='No wallpaper set - clients use the default gradient.'}}catch(e){note.textContent='Could not load.'}};
+  const up=safe(async()=>{const f=file.files[0];if(!f){toast('Choose an image first');return}if(f.size>8*1024*1024){toast('Image must be under 8 MB');return}
+    const r=await fetch('/api/admin/wallpaper',{method:'POST',headers:{'X-Admin-Key':key,'Content-Type':f.type||'image/jpeg'},body:f});
+    if(!r.ok){toast(await r.text()||'Upload failed');return}toast('Wallpaper uploaded - clients will update');await load()});
+  const del=safe(async()=>{await api('/wallpaper','DELETE');toast('Wallpaper removed');await load()});
+  show(undefined,h('div',{class:'card'},h('b',{},'Lock-screen wallpaper'),h('p',{style:'color:var(--muted)'},'Upload a JPG or PNG (max 8 MB, 1920x1080 or larger works best). Use only images you own or have the right to use.'),
+    h('div',{class:'bar'},file,h('button',{class:'btn primary',onclick:up},'Upload'),h('button',{class:'btn',onclick:del},'Remove')),note,img));load()}
+
+
+// ===================== Point of Sale =====================
+let cart=[];
+async function pgPOS(){
+  const prods=(await api('/products')).filter(p=>p.active),users=await api('/users');
+  const q=h('input',{placeholder:'Search items...'}),grid=h('div',{class:'seats'}),body=h('tbody'),total=h('b',{},peso(0));
+  const pay=h('select',{},h('option',{value:'Cash'},'Cash'),h('option',{value:'Wallet'},'Member wallet'));
+  const who=h('select',{style:'display:none'},users.map(u=>h('option',{value:u.username},u.username+' ('+peso(u.wallet)+')')));
+  pay.onchange=()=>{who.style.display=pay.value==='Wallet'?'':'none'};
+  const sum=()=>cart.reduce((a,c)=>a+c.price*c.qty,0);
+  const drawCart=()=>{body.replaceChildren(...cart.map(c=>h('tr',{},h('td',{},c.name),
+    h('td',{},h('button',{class:'btn',onclick:()=>{c.qty--;if(c.qty<=0)cart=cart.filter(x=>x!==c);drawCart()}},'-'),' '+c.qty+' ',
+      h('button',{class:'btn',onclick:()=>{const p=prods.find(x=>x.id===c.id);if(p&&c.qty<p.stock){c.qty++;drawCart()}else toast('No more stock')}},'+')),
+    h('td',{},peso(c.price*c.qty)))));total.textContent=peso(sum())};
+  const drawGrid=()=>{const s=q.value.toLowerCase();grid.replaceChildren(...prods.filter(p=>!s||(p.name+p.category).toLowerCase().includes(s)).map(p=>
+    h('div',{class:'card seat '+(p.stock>0?'Available':'Occupied'),onclick:()=>{
+      if(p.stock<=0){toast('Out of stock');return}
+      const c=cart.find(x=>x.id===p.id);
+      if(c){if(c.qty<p.stock)c.qty++;else toast('No more stock')}else cart.push({id:p.id,name:p.name,price:p.price,qty:1});
+      drawCart()}},h('b',{},p.name),h('div',{},p.category||'-'),h('div',{},peso(p.price)+' \u2022 '+p.stock+' left'))))};
+  q.oninput=drawGrid;
+  const done=safe(async()=>{if(!cart.length){toast('The order is empty');return}
+    const r=await api('/sales','POST',{items:cart.map(c=>({productId:c.id,qty:c.qty})),payment:pay.value,username:pay.value==='Wallet'?who.value:null});
+    toast('Sale complete: '+peso(r.total));cart=[];refresh()});
+  show(undefined,h('div',{class:'grid2'},
+    h('div',{class:'card'},h('div',{class:'bar'},q),grid),
+    h('div',{class:'card'},h('b',{},'Current order'),h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Item','Qty','Subtotal'].map(x=>h('th',{},x)))),body)),
+      h('div',{class:'bar'},'Total:',total),h('div',{class:'bar'},pay,who),
+      h('div',{class:'bar'},h('button',{class:'btn',onclick:()=>{cart=[];drawCart()}},'Clear'),h('button',{class:'btn primary',onclick:done},'Complete sale')))));
+  drawGrid();drawCart()}
+
+// ===================== Inventory =====================
+async function pgInventory(){
+  const [prods,sups]=await Promise.all([api('/products'),api('/suppliers')]);const list=prods.filter(p=>p.active);
+  const q=h('input',{placeholder:'Search item name or category...'}),body=h('tbody');
+  const edit=safe(async p=>{const v=await ask(p?'Edit item':'Add item',[{name:'name',label:'Item name',value:p?p.name:''},{name:'category',label:'Category',value:p?p.category:''},
+      {name:'price',label:'Unit price',type:'number',value:p?p.price:''},{name:'reorder',label:'Reorder level',type:'number',value:p?p.reorderLevel:'5'},
+      ...(p?[]:[{name:'stock',label:'Starting stock',type:'number',value:'0'}])],'Save');
+    if(!v)return;await api('/products','POST',{id:p?p.id:0,name:v.name,category:v.category,price:+v.price||0,reorderLevel:+v.reorder||0,stock:+v.stock||0});toast('Saved');refresh()});
+  const stockIn=safe(async p=>{const names=['(none)',...sups.map(s=>s.name)];
+    const v=await ask('Stock in: '+p.name,[{name:'qty',label:'Quantity',type:'number',value:'10'},{name:'cost',label:'Unit cost',type:'number',value:'0'},{name:'sup',label:'Supplier',options:names}],'Add stock');
+    if(!v)return;const s=sups.find(x=>x.name===v.sup);await api('/stockin','POST',{productId:p.id,qty:+v.qty||0,unitCost:+v.cost||0,supplierId:s?s.id:null});toast('Stock added');refresh()});
+  const del=safe(async p=>{const v=await ask('Delete '+p.name+'?',[],'Delete');if(!v)return;await api('/products/'+p.id,'DELETE');refresh()});
+  const draw=()=>{const s=q.value.toLowerCase();body.replaceChildren(...list.filter(p=>!s||(p.name+p.category).toLowerCase().includes(s)).map(p=>
+    h('tr',{},h('td',{},p.name),h('td',{},p.category||'-'),h('td',{},peso(p.price)),
+      h('td',{},h('span',{class:'badge '+(p.stock<=0?'Occupied':p.stock<=p.reorderLevel?'Paused':'Available')},p.stock)),h('td',{},p.reorderLevel),
+      h('td',{},h('button',{class:'btn',onclick:()=>edit(p)},'Edit'),' ',h('button',{class:'btn primary',onclick:()=>stockIn(p)},'Stock in'),' ',h('button',{class:'btn',onclick:()=>del(p)},'Delete')))))};
+  q.oninput=draw;
+  show(undefined,h('div',{class:'card'},h('div',{class:'bar'},q,h('span',{class:'sp'}),h('button',{class:'btn primary',onclick:()=>edit(null)},'+ Add item')),
+    h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Item','Category','Unit price','Stock','Reorder level','Actions'].map(x=>h('th',{},x)))),body))));draw()}
+
+// ===================== Suppliers =====================
+async function pgSuppliers(){
+  const sups=await api('/suppliers');
+  const edit=safe(async s=>{const v=await ask(s?'Edit supplier':'Add supplier',[{name:'name',label:'Name',value:s?s.name:''},{name:'phone',label:'Phone',value:s?s.phone:''}],'Save');
+    if(!v)return;await api('/suppliers','POST',{id:s?s.id:0,name:v.name,phone:v.phone});refresh()});
+  const del=safe(async s=>{const v=await ask('Delete '+s.name+'?',[],'Delete');if(!v)return;await api('/suppliers/'+s.id,'DELETE');refresh()});
+  show(undefined,h('div',{class:'card'},h('div',{class:'bar'},h('span',{class:'sp'}),h('button',{class:'btn primary',onclick:()=>edit(null)},'+ Add supplier')),
+    h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['Name','Phone',''].map(x=>h('th',{},x)))),
+      h('tbody',{},sups.map(s=>h('tr',{},h('td',{},s.name),h('td',{},s.phone||'-'),h('td',{},h('button',{class:'btn',onclick:()=>edit(s)},'Edit'),' ',h('button',{class:'btn',onclick:()=>del(s)},'Delete')))))))))}
+
+// ===================== Sales =====================
+async function pgSales(){
+  const iso=d=>d.toISOString().slice(0,10);const now=new Date(),first=new Date(now.getFullYear(),now.getMonth(),1);
+  const f=h('input',{type:'date',value:iso(first)}),t=h('input',{type:'date',value:iso(now)});const body=h('tbody'),stats=h('div',{class:'cards'});
+  const load=safe(async()=>{const end=new Date(t.value);end.setDate(end.getDate()+1);const data=await api(`/sales?from=${f.value}&to=${iso(end)}`);
+    body.replaceChildren(...data.map(s=>{let items='';try{items=JSON.parse(s.items).map(i=>i.qty+' x '+i.name).join(', ')}catch(e){}
+      return h('tr',{},h('td',{},s.id),h('td',{},fdt(s.at)),h('td',{},s.customer),h('td',{},s.payment),h('td',{},items),h('td',{},peso(s.total)))}));
+    stats.replaceChildren(kpi('Sales',data.length),kpi('Revenue',peso(data.reduce((a,s)=>a+s.total,0))))});
+  f.onchange=t.onchange=load;
+  show(undefined,stats,h('div',{class:'card'},h('div',{class:'bar'},h('span',{class:'sp'}),f,'to',t),h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['ID','Date','Customer','Payment','Items','Total'].map(x=>h('th',{},x)))),body))));load()}
+
+// ===================== Activity =====================
+async function pgActivity(){
+  const rows=await api('/activity');const sig=JSON.stringify(rows.map(r=>[r.pc,r.customer,r.app,r.title]));
+  const hist=safe(async pc=>{const l=await api('/activity/'+encodeURIComponent(pc));
+    const ov=h('div',{class:'ov'}),box=h('div',{class:'modal',style:'width:min(94vw,640px);max-height:80vh;overflow:auto'},h('h3',{},'Recent activity - '+pc));
+    box.append(h('table',{},h('thead',{},h('tr',{},['Time','User','Program','Window'].map(x=>h('th',{},x)))),h('tbody',{},l.map(a=>h('tr',{},h('td',{},fdt(a.at)),h('td',{},a.customer),h('td',{},a.app),h('td',{style:'white-space:normal'},a.title))))));
+    box.append(h('button',{class:'btn',onclick:()=>ov.remove()},'Close'));ov.append(box);document.body.append(ov)});
+  show(sig,h('div',{class:'card'},h('p',{style:'color:var(--muted);margin-top:0'},'Shows the active program and window title on PCs with a running session. Customers are told on the lock screen. History is kept for 14 days.'),
+    h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['PC','Customer','Program','Window title','Last update',''].map(x=>h('th',{},x)))),
+      h('tbody',{},rows.map(r=>h('tr',{},h('td',{},r.pc),h('td',{},r.customer),h('td',{},r.app||'-'),h('td',{style:'white-space:normal'},r.title||'-'),h('td',{},fdt(r.at)),h('td',{},h('button',{class:'btn',onclick:()=>hist(r.pc)},'History')))))))))}
+
+// ===================== Chat =====================
+const chat={msgs:[],last:0,sel:'',seen:{}};
+async function pollChat(){const m=await api('/chat?afterId='+chat.last);if(m.length){chat.msgs.push(...m);chat.last=m[m.length-1].id}}
+function renderChat(){
+  const pcs=[...new Set(chat.msgs.map(m=>m.pc))];if(!chat.sel&&pcs.length)chat.sel=pcs[0];
+  const lst=$('#chatList'),th=$('#chatThread');if(!lst||!th)return;
+  lst.replaceChildren(...pcs.map(pc=>{const un=chat.msgs.filter(m=>m.pc===pc&&!m.fromStaff&&m.id>(chat.seen[pc]||0)).length;
+    return h('button',{class:'btn',style:'display:block;width:100%;margin-bottom:6px;'+(pc===chat.sel?'border-color:var(--brand)':''),onclick:()=>{chat.sel=pc;renderChat()}},pc+(un?'  ('+un+' new)':''))}));
+  const mine=chat.msgs.filter(m=>m.pc===chat.sel);if(mine.length)chat.seen[chat.sel]=mine[mine.length-1].id;
+  const atBottom=th.scrollTop+th.clientHeight>=th.scrollHeight-30;
+  th.replaceChildren(...mine.map(m=>h('div',{style:'margin:4px 0;text-align:'+(m.fromStaff?'right':'left')},h('span',{class:'badge',style:m.fromStaff?'background:var(--brand);color:#fff':''},(m.fromStaff?'Staff: ':m.pc+': ')+m.text))));
+  if(atBottom)th.scrollTop=th.scrollHeight}
+async function pgChat(){await pollChat();
+  if(!$('#chatThread')){
+    const send=safe(async()=>{const box=$('#chatBox'),t=box.value.trim();if(!t||!chat.sel){toast('Pick a PC and type a message');return}box.value='';await api('/chat','POST',{pc:chat.sel,text:t});await pollChat();renderChat()});
+    const pcInput=h('input',{id:'chatNew',placeholder:'PC name (e.g. PC-01)',style:'width:100%;margin-bottom:8px'});
+    pcInput.onkeydown=e=>{if(e.key==='Enter'&&pcInput.value.trim()){chat.sel=pcInput.value.trim();pcInput.value='';if(!chat.msgs.some(m=>m.pc===chat.sel))chat.msgs.push({id:0,pc:chat.sel,fromStaff:true,text:'(new chat)',at:''});renderChat()}};
+    show(undefined,h('div',{class:'grid2',style:'grid-template-columns:1fr 2fr'},h('div',{class:'card'},pcInput,h('div',{id:'chatList'})),
+      h('div',{class:'card'},h('div',{id:'chatThread',style:'height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px;margin-bottom:8px'}),
+        h('div',{class:'bar'},h('input',{id:'chatBox',placeholder:'Type a message',style:'flex:1',onkeydown:e=>{if(e.key==='Enter')send()}}),h('button',{class:'btn primary',onclick:send},'Send')))));
+  }
+  renderChat()}
+
+// ===================== Remote =====================
+async function pgRemote(){
+  const pcs=await api('/pcs');
+  const rdp=p=>{const b=new Blob(['full address:s:'+p.ip+'\r\nprompt for credentials:i:1\r\n'],{type:'application/x-rdp'});const a=h('a',{href:URL.createObjectURL(b),download:p.name+'.rdp'});document.body.append(a);a.click();a.remove()};
+  const copy=safe(async p=>{await navigator.clipboard.writeText(p.ip);toast('Copied '+p.ip)});
+  show(undefined,h('div',{class:'card'},h('p',{style:'margin-top:0'},'Connect to a PC from your admin PC.'),
+    h('p',{style:'color:var(--muted)'},'Recommended: install TightVNC (free) on each customer PC and use TightVNC Viewer on this PC with the address below. VNC lets you watch and help without logging the customer out. Windows Remote Desktop (.rdp) signs the current user out on most Windows editions, so use it only on idle PCs.'),
+    h('div',{class:'tw'},h('table',{},h('thead',{},h('tr',{},['PC','IP address','Status',''].map(x=>h('th',{},x)))),
+      h('tbody',{},pcs.map(p=>h('tr',{},h('td',{},p.name),h('td',{},p.ip||'-'),h('td',{},h('span',{class:'badge '+p.status},p.status)),
+        h('td',{},h('button',{class:'btn',onclick:()=>copy(p)},'Copy IP'),' ',h('button',{class:'btn',onclick:()=>rdp(p)},'Download .rdp')))))))))}
+
+if(key){api('/summary').then(()=>{$('#login').hidden=true;$('#app').hidden=false;route()}).catch(()=>{})}
+</script></body></html>
+

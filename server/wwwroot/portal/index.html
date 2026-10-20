@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Member Portal</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--text:#1b2433;--muted:#6b7587;--line:#e4e8f0;--brand:#2f6df6}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#171e2e;--text:#e8ecf5;--muted:#8d97ab;--line:#26304a}}
+[hidden]{display:none!important}*{box-sizing:border-box}
+body{margin:0;font:15px system-ui,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+main{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:22px;color:var(--brand);margin:8px 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);margin:6px 0;font-size:16px}
+.btn{padding:11px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;cursor:pointer}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;width:100%}
+.big{font-size:32px;font-weight:700}.muted{color:var(--muted)}
+table{width:100%;border-collapse:collapse}td,th{padding:8px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+#msg{color:#d97706;min-height:20px;margin:6px 0}
+</style></head><body><main>
+<h1>Member Portal</h1>
+<div id="msg"></div>
+<div id="login" class="card">
+  <input id="u" placeholder="Username" autocomplete="username" autocapitalize="none">
+  <input id="p" type="password" placeholder="Password" autocomplete="current-password">
+  <button class="btn primary" id="go">Log in</button>
+  <div id="g" style="margin-top:12px;display:flex;justify-content:center"></div>
+</div>
+<div id="acct" hidden>
+  <div class="card"><div class="muted" id="who"></div><div class="big" id="wallet"></div><div class="muted" id="left"></div></div>
+  <div class="card"><b>Change password</b>
+    <input id="op" type="password" placeholder="Old password" autocomplete="current-password">
+    <input id="np" type="password" placeholder="New password (min 4)" autocomplete="new-password">
+    <button class="btn primary" id="cp">Save password</button>
+    <div class="muted" id="gnote" hidden style="margin-top:6px">Signed in with Google? Leave the old password empty to set a password for logging in at the PCs.</div></div>
+  <div class="card"><b>Recent sessions</b><table id="ses"></table></div>
+  <div class="card"><b>Top-ups</b><table id="top"></table></div>
+  <button class="btn" id="out">Log out</button>
+</div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const peso=n=>'\u20B1'+Number(n||0).toFixed(2);
+const dur=m=>Math.floor(m/60)+'h '+(m%60)+'m';
+const fdt=i=>new Date(i).toLocaleString([],{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+let token=sessionStorage.getItem('pt')||'';
+async function call(path,method='GET',body){
+  const r=await fetch('/api/portal'+path,{method,headers:Object.assign({'Content-Type':'application/json'},token?{Authorization:'Bearer '+token}:{}),body:body?JSON.stringify(body):undefined});
+  const t=await r.text();if(!r.ok)throw new Error(r.status===401&&token?'Please log in again.':(t||'Error '+r.status));return t?JSON.parse(t):{}}
+function say(t){$('#msg').textContent=t||''}
+function rows(el,head,data){el.replaceChildren();const h=document.createElement('tr');head.forEach(x=>{const th=document.createElement('th');th.textContent=x;h.append(th)});el.append(h);
+  data.forEach(r=>{const tr=document.createElement('tr');r.forEach(c=>{const td=document.createElement('td');td.textContent=c;tr.append(td)});el.append(tr)})}
+async function loadMe(){
+  const m=await call('/me');
+  $('#login').hidden=true;$('#acct').hidden=false;
+  $('#who').textContent=m.fullName||m.username;$('#wallet').textContent=peso(m.wallet);
+  $('#left').textContent=m.tier+' rate \u2022 about '+dur(m.minutesLeft)+' of time';
+  $('#gnote').hidden=!m.google;
+  rows($('#ses'),['Date','PC','Time','Amount'],m.sessions.map(s=>[fdt(s.at),s.pc,dur(s.minutes),s.active?'In use':peso(s.amount)]));
+  rows($('#top'),['Date','Amount'],m.topups.map(t=>[fdt(t.at),peso(t.amount)]))}
+function signedIn(t){token=t;sessionStorage.setItem('pt',t);say('');return loadMe().catch(e=>say(e.message))}
+$('#go').onclick=async()=>{try{say('');const r=await call('/login','POST',{username:$('#u').value,password:$('#p').value});$('#p').value='';await signedIn(r.token)}catch(e){say(e.message)}};
+$('#p').onkeydown=e=>{if(e.key==='Enter')$('#go').click()};
+$('#cp').onclick=async()=>{try{await call('/change-password','POST',{oldPassword:$('#op').value,newPassword:$('#np').value});$('#op').value='';$('#np').value='';say('Password changed.')}catch(e){say(e.message)}};
+$('#out').onclick=()=>{token='';sessionStorage.removeItem('pt');$('#acct').hidden=true;$('#login').hidden=false;say('')};
+if(token)loadMe().catch(()=>{token='';sessionStorage.removeItem('pt')});
+// Google sign-in appears only when the admin has set a Google client ID on the server
+call('/config').then(c=>{if(!c.googleClientId)return;const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
+  s.onload=()=>{google.accounts.id.initialize({client_id:c.googleClientId,callback:async r=>{try{const t=await call('/google','POST',{credential:r.credential});await signedIn(t.token)}catch(e){say(e.message)}}});
+    google.accounts.id.renderButton($('#g'),{theme:'outline',size:'large',text:'signin_with'})};document.head.append(s)}).catch(()=>{});
+</script></body></html>

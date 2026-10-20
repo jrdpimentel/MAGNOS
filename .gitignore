@@ -1,0 +1,15 @@
+bin/
+obj/
+dist/
+release/
+stage/
+*.db
+*.db-shm
+*.db-wal
+wallpaper.bin
+wallpaper.type
+*.user
+.vs/
+update.ps1
+TestResults/
+TestResults/
